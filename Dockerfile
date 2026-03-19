@@ -20,4 +20,3 @@ RUN rm -rf /etc/apt/sources.list.d/* && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-USER neko
