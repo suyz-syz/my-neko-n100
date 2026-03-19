@@ -1,29 +1,19 @@
-# 使用官方 Intel Edge 镜像作为底座
 FROM ghcr.io/m1k1o/neko/intel-microsoft-edge:latest
 
 USER root
 
-# 1. 彻底清理旧的第三方仓库，防止 GPG 密钥报错导致更新中断
-RUN rm -rf /etc/apt/sources.list.d/* && \
-    # 2. 将主源强行替换为 Debian Bookworm (Debian 12)，以支持 N100 硬件
-    sed -i 's/bullseye/bookworm/g' /etc/apt/sources.list && \
-    # 3. 更新并安装 N100 所需的新版驱动 + GStreamer 硬件加速全家桶
+# 1. 更新源到 Bookworm 并安装 N100 所需驱动
+RUN sed -i 's/bullseye/bookworm/g' /etc/apt/sources.list && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
     intel-media-va-driver-non-free \
-    libva-wayland2 \
-    libva-drm2 \
-    libva-x11-2 \
-    vainfo \
-    gstreamer1.0-tools \
-    gstreamer1.0-vaapi \
-    gstreamer1.0-plugins-bad \
-    gstreamer1.0-plugins-good \
-    gstreamer1.0-plugins-base && \
-    # 4. 清理缓存，减小镜像体积
+    libva-wayland2 libva-drm2 libva-x11-2 \
+    gstreamer1.0-vaapi gstreamer1.0-plugins-bad \
+    gstreamer1.0-plugins-good gstreamer1.0-plugins-base && \
+    # 2. 【核心必杀技】物理删除 VP8 的 VAAPI 插件文件
+    # 这样 GStreamer 扫描时就会发现 VP8 硬件编码彻底“失踪”，从而被迫转向 H.264
+    rm -f /usr/lib/x86_64-linux-gnu/gstreamer-1.0/libgstvaapivp8.so && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# --- 关键修正 ---
-# 不要在这里写 USER neko。
-# 必须让容器以 root 启动，内部的 supervisord 才能成功执行权限降级逻辑。
+# 保持 root 运行，由内部 supervisord 降权
