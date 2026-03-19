@@ -19,14 +19,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # --- 关键修正：将仓库名转换为全小写 ---
+      # 将镜像名转为小写，防止推送失败
       - name: Lowercase IMAGE_NAME
         run: |
           echo "IMAGE_NAME_LC=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
 
+      # 升级到 v3，解决 Node.js 警告
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # 升级到 v3
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
@@ -34,12 +36,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # 升级到 v6
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          # 使用转换后的小写变量
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
