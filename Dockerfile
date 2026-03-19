@@ -1,12 +1,14 @@
-# 使用官方 Intel Edge 镜像作为底座
+# 使用官方 Intel Edge 镜像
 FROM ghcr.io/m1k1o/neko/intel-microsoft-edge:latest
 
 USER root
 
-# 1. 临时更换为 Debian Bookworm 软件源，以获取 23.x+ 版本的 Intel 驱动
-RUN sed -i 's/bullseye/bookworm/g' /etc/apt/sources.list && \
+# 1. 彻底清理旧的第三方仓库，防止 GPG 密钥报错导致更新中断
+RUN rm -rf /etc/apt/sources.list.d/* && \
+    # 2. 将主源强行替换为 Debian Bookworm (Debian 12)
+    sed -i 's/bullseye/bookworm/g' /etc/apt/sources.list && \
+    # 3. 更新并安装 N100 所需的新版驱动
     apt-get update && \
-    # 2. 安装适配 N100 的最新硬件加速驱动和库
     apt-get install -y --no-install-recommends \
     intel-media-va-driver-non-free \
     libva-wayland2 \
@@ -14,9 +16,8 @@ RUN sed -i 's/bullseye/bookworm/g' /etc/apt/sources.list && \
     libva-x11-2 \
     vainfo \
     gstreamer1.0-vaapi && \
-    # 3. 清理缓存，保持镜像精简
+    # 4. 清理，减小体积
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# 切回 neko 用户运行程序
 USER neko
